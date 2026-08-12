@@ -25,8 +25,8 @@ muscle memory. Emulator-side is both far simpler and strictly more faithful.
 
 Either BizHawk in this workspace works:
 
-- `C:\Users\Ivor\Documents\Game Modding\Tools\BizHawk-2.10\EmuHawk.exe`
-- `C:\Users\Ivor\Documents\Game Modding\HGSS modding\BizHawk-2.11.1-win-x64\EmuHawk.exe`
+- `C:\path\to\Game Modding\Tools\BizHawk-2.10\EmuHawk.exe`
+- `C:\path\to\Game Modding\HGSS modding\BizHawk-2.11.1-win-x64\EmuHawk.exe`
 
 The console prints the detected game, jump button and memory domain at load. The
 on-screen overlay shows the jump count, current speed, and whether the counter is
@@ -77,14 +77,12 @@ mashing and slides inflate it. Fine as a proof of concept; see next steps.
 Platform differences are handled per profile: NES reads the `RAM` domain and
 jumps with **A**, SNES reads `WRAM` and jumps with **B**.
 
-**How detection works.** A jump is counted on the rising edge of the jump button.
-Where a gate exists, that edge is additionally required to happen during live
-gameplay, so presses in menus, pause screens, death animations and cutscenes are
-ignored.
-
-**Ungated games** count every jump-button press, including in menus and dialogue.
-Usable — the counter just runs a little hot. The script says `[UNGATED]` in the
-console at load so you always know which mode you're in.
+**Gates are secondary now.** Mega Man X, X2, X3 and Mega Man 3 also check a
+"live gameplay" gate (menu state, pause flag, `can_move`), which drives the
+`ACTIVE` / `waiting` overlay. The other games have no gate, and it matters much
+less than it sounds: a menu cannot produce an *airborne transition*, so exact
+counting effectively gates itself. The console prints which mode a game is in
+when the script loads.
 
 ## Known limitations
 
@@ -268,9 +266,9 @@ than silently gating on the wrong memory. This is why NES uses `RAM` and not
   Add a profile to its `CFG` table, then:
 
   ```powershell
-  & "C:\Users\Ivor\Documents\Game Modding\HGSS modding\BizHawk-2.11.1-win-x64\EmuHawk.exe" `
-    --lua="C:\Users\Ivor\Documents\Game Modding\MegaMan-JumpRamp\hunter.lua" `
-    "C:\Users\Ivor\Documents\Game Modding\Games\Nes\Mega Man 3 (USA).zip"
+  & "C:\path\to\Game Modding\HGSS modding\BizHawk-2.11.1-win-x64\EmuHawk.exe" `
+    --lua="C:\path\to\Game Modding\MegaMan-JumpRamp\hunter.lua" `
+    "C:\path\to\Game Modding\Games\Nes\Mega Man 3 (USA).zip"
   ```
 
   Results land in `hunter_log.txt`. Always characterise a candidate against real
@@ -297,9 +295,9 @@ than silently gating on the wrong memory. This is why NES uses `RAM` and not
   appends to `probe_log.txt` and quits. Sweep every ROM with:
 
   ```powershell
-  $exe = "C:\Users\Ivor\Documents\Game Modding\HGSS modding\BizHawk-2.11.1-win-x64\EmuHawk.exe"
-  $lua = "C:\Users\Ivor\Documents\Game Modding\MegaMan-JumpRamp\probe.lua"
-  Get-ChildItem "C:\Users\Ivor\Documents\Game Modding\Games\Nes\*.zip" | ForEach-Object {
+  $exe = "C:\path\to\Game Modding\HGSS modding\BizHawk-2.11.1-win-x64\EmuHawk.exe"
+  $lua = "C:\path\to\Game Modding\MegaMan-JumpRamp\probe.lua"
+  Get-ChildItem "C:\path\to\Game Modding\Games\Nes\*.zip" | ForEach-Object {
       Start-Process $exe -ArgumentList "--lua=`"$lua`"", "`"$($_.FullName)`"" -Wait
   }
   ```
