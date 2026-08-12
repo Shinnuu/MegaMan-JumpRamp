@@ -331,3 +331,20 @@ than silently gating on the wrong memory. This is why NES uses `RAM` and not
   EmuHawk instances can run side by side without clobbering each other. Safe to
   delete; gitignored. Only created once you land your first jump.
 - `probe_log.txt` — probe output. Gitignored.
+
+## Credits
+
+The live-gameplay gate addresses for Mega Man X1–X3 come from
+[lx5's Mega Man X Archipelago worlds](https://github.com/lx5x/), and the NES gate
+addresses from the `mm2` and `mm3` worlds in
+[ArchipelagoMW/Archipelago](https://github.com/ArchipelagoMW/Archipelago). Only
+RAM addresses were used — no code from either project is included here.
+
+Every airborne byte was found independently by `hunter.lua`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+No ROMs, BIOS images or other game data are included in this repository, and
+none will be accepted into it.
