@@ -17,20 +17,26 @@ the main loop) would break the physics: collision is resolved per frame against
 tiles, so scaled velocities clip you through walls and jump arcs stop matching
 muscle memory. Emulator-side is both far simpler and strictly more faithful.
 
+## Requirements
+
+- **BizHawk** on Windows. Developed and tested on **2.11.1**; `client.speedmode`
+  exists back to 2.10, so older versions will probably work but are untested.
+- A NES or SNES Mega Man ROM. None are included here, and none ever will be.
+
+Core choice does not matter. Everything was measured on **Snes9x** (SNES) and
+BizHawk's default NES cores, but the addresses are plain console RAM offsets, so
+they hold whichever core loads. Nothing else needs installing — the script is
+self-contained and the Python files are optional developer tests.
+
 ## Usage
 
 1. Open EmuHawk and load your ROM.
 2. **Tools → Lua Console → Script → Open Script**
 3. Select `jumpramp.lua`.
 
-Either BizHawk in this workspace works:
-
-- `C:\path\to\Game Modding\Tools\BizHawk-2.10\EmuHawk.exe`
-- `C:\path\to\Game Modding\HGSS modding\BizHawk-2.11.1-win-x64\EmuHawk.exe`
-
-The console prints the detected game, jump button and memory domain at load. The
-on-screen overlay shows the jump count, current speed, and whether the counter is
-`ACTIVE`, `waiting` (not in gameplay), or `PAUSED`.
+That is the whole setup. The console prints the detected game, jump button and
+memory domain at load. The on-screen overlay shows the jump count, current speed,
+and whether the counter is `ACTIVE`, `waiting` (not in gameplay), or `PAUSED`.
 
 ## Hotkeys
 
@@ -59,7 +65,7 @@ console prints the name it actually sees — paste that into the config block.
 | Mega Man X | SNES | B | `$0BAA` {06,08,0A} | exact — verified 6/6 |
 | Mega Man X2 | SNES | B | `$09DA` {06,08,0A} | exact — verified 6/6 |
 | Mega Man X3 | SNES | B | `$09DA` {06,08,0A} | exact — verified 6/6 |
-| Mega Man & Bass | SNES | B | — | button (no ROM to test) |
+| Mega Man & Bass | SNES | B | — | button only — out of scope, untested |
 
 **Exact counting** uses a verified player-state byte. A jump is counted when the
 player *enters the airborne state* **and** the jump button went down within
@@ -70,9 +76,9 @@ player *enters the airborne state* **and** the jump button went down within
 - sliding in MM3 (Down+A) → button pressed, never leaves the ground → ignored
 - jumping from a standstill, from a run, or off a wall → both → counted
 
-**Button counting** is the fallback where no airborne byte has been found yet. It
-counts the rising edge of the jump button during live gameplay, so midair
-mashing and slides inflate it. Fine as a proof of concept; see next steps.
+**Button counting** is the fallback for a profile with no airborne byte — now
+only Mega Man & Bass. It counts the rising edge of the jump button, so midair
+mashing inflates it.
 
 Platform differences are handled per profile: NES reads the `RAM` domain and
 jumps with **A**, SNES reads `WRAM` and jumps with **B**.
@@ -86,8 +92,14 @@ when the script loads.
 
 ## Known limitations
 
-**Mega Man & Bass still counts button presses**, because there is no ROM for it
-in `Games/`. Every other game counts exactly.
+**All ten supported games count exactly.** Mega Man & Bass is deliberately out of
+scope and was never tested: its profile is present and will count button presses,
+which inflates on midair mashing, but nobody should rely on it.
+
+**Mega Man 6 reads "airborne" on the title screen.** `$00AD` is `0x00` at boot
+and `0x00` is its airborne value. This is harmless — a jump is only counted on a
+*transition* into the airborne state, and the counter cannot fire on the first
+frame — but it is why MM6 may show `ACTIVE` before you are in a stage.
 
 **Mega Man 1's byte is the least trustworthy** of the verified set. It counts
 correctly in testing, but it is not a canonical state byte, so it is the most
@@ -108,8 +120,8 @@ deliberately tested last.
 
 ## Where the addresses came from
 
-**SNES (X1–X3)** — vanilla WRAM offsets from lx5's Archipelago clients in
-`Reference/lx5-apworlds/src/`:
+**SNES (X1–X3)** — vanilla WRAM offsets taken from lx5's Mega Man X1–X3
+Archipelago clients:
 
 | | X1 | X2 | X3 |
 |---|---|---|---|
@@ -124,8 +136,9 @@ every `can_move` byte `0x00`. Gameplay state `0x06` is death, excluded for free.
 X2's apworld also exposes a `player_action` byte, but it lives in an SRAM mirror
 that only exists in an AP-patched ROM — no use for vanilla runs.
 
-**NES (MM2, MM3)** — from the `mm2` and `mm3` worlds in the Archipelago checkout
-(`Archipelago/worlds/`), both of which read the `RAM` domain:
+**NES (MM2, MM3)** — from the `mm2` and `mm3` worlds in
+[ArchipelagoMW/Archipelago](https://github.com/ArchipelagoMW/Archipelago), both
+of which read the `RAM` domain:
 
 | | Address | Meaning |
 |---|---|---|
@@ -201,12 +214,13 @@ $env:JUMPRAMP_STATE = "C:\path\to\BizHawk\SNES\State\Mega Man X2 (USA).Snes9x.Qu
 Savestates are core-specific — the core in the filename must match the core the
 new instance loads, or the state will not restore.
 
-**MM1, MM4, MM5, MM6** have no apworld in this workspace, so they ship ungated
-with the correct platform domain and button.
+**MM1, MM4, MM5 and MM6** had no Archipelago client to borrow gate addresses
+from, so their airborne bytes came entirely from `hunter.lua`. They ship without
+a live-gameplay gate, which matters little now that counting is exact.
 
 ## What has actually been verified
 
-Every ROM in `Games/Nes` and `Games/Snes` was booted under BizHawk 2.11.1 with
+All ten ROMs were booted under BizHawk 2.11.1 with
 `probe.lua` (10/10 loaded cleanly):
 
 - **ROM titles resolve as expected.** SNES titles come from `gamedb_snes.txt`
@@ -225,7 +239,11 @@ Every ROM in `Games/Nes` and `Games/Snes` was booted under BizHawk 2.11.1 with
   `verify.lua`: 6 scripted jumps plus provably-midair mashes give
   `exact = 6, button = 24`.
 
-**Not verified:** only Mega Man & Bass, which has no ROM in `Games/`.
+- **The shipping `jumpramp.lua` itself was smoke-tested** on Mega Man 3, 6, X and
+  X2 — covering both platforms, both memory domains, and gated and gateless
+  profiles. Each ran 400 frames with correct detection and no errors.
+
+**Not verified:** only Mega Man & Bass, which is out of scope.
 
 Mega Man 7 scored 5 rather than 6, and that is fine: its midair-mash count was
 15, which is exactly 3 per jump for 5 jumps. One scripted cycle produced no jump
@@ -246,11 +264,10 @@ than silently gating on the wrong memory. This is why NES uses `RAM` and not
 
 ## Possible next steps
 
-1. **Mega Man & Bass** needs a ROM in `Games/` before anything can be tested.
-2. **Improve Mega Man 1's byte.** `$01F5` counts correctly but is not a real
+1. **Improve Mega Man 1's byte.** `$01F5` counts correctly but is not a real
    state enum. A longer hunt, or MM1 RAM maps from the TAS/romhacking community,
    would likely turn up the canonical one.
-3. **Gates for the gateless games.** Less urgent than it was: with an airborne
+2. **Gates for the gateless games.** Less urgent than it was: with an airborne
    byte, menu presses cannot produce an airborne transition, so exact counting
    self-gates. A gate would still help the on-screen `ACTIVE`/`waiting` display
    be meaningful. MM3's `$00B2` is the model — one byte nonzero only in-stage.
