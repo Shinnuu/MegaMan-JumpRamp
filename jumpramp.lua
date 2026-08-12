@@ -79,12 +79,12 @@ local PROFILES = {
       { addr = 0x1F37, eq = 0x00 },
       { addr = 0x1F25, eq = 0x00, len = 6 },
     },
-    -- INFERRED, not measured. X2's intro puts X on the ride chaser, where he
-    -- dies before any hunt can run, so this was never confirmed on hardware.
-    -- X2 and X3 share their HP address ($09FF) and their menu/gameplay/pause
-    -- addresses, and on both X1 and X3 the state byte sits exactly 0x25 below
-    -- HP - so X2's should be $09DA too. Treat as unverified until someone
-    -- plays X2 into a normal stage and checks the counter.
+    -- Originally inferred rather than hunted: X2's intro puts X on the ride
+    -- chaser, where he dies before any hunt can measure a jump. X2 and X3 share
+    -- their HP address ($09FF), and on both X1 and X3 the state byte sits
+    -- exactly 0x25 below HP - so X2's had to be $09DA. Since confirmed from a
+    -- savestate taken in a normal on-foot stage: 6/6 with 18 midair mashes
+    -- correctly rejected.
     airborne = { addr = 0x09DA, values = { 0x06, 0x08, 0x0A } },
   },
   {

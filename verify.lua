@@ -26,6 +26,17 @@ local MASHES      = 3
 local JUMP_WINDOW = 8      -- must match jumpramp.lua
 local SPEED       = 800
 
+-- Optional: start from a savestate instead of mashing through the intro. Set
+-- the JUMPRAMP_STATE environment variable to a .State path. Needed for games
+-- whose opening cannot be driven automatically - Mega Man X2 puts X on the ride
+-- chaser, where he dies long before any jump can be measured. Save a state
+-- standing on flat ground with room to jump, and point this at it.
+local START_STATE = nil
+do
+  local ok, v = pcall(os.getenv, "JUMPRAMP_STATE")
+  if ok and v and v ~= "" then START_STATE = v end
+end
+
 --------------------------------------------------------------------------------
 
 local function script_dir()
@@ -128,6 +139,21 @@ end
 say(string.format("  %s  airborne $%04X  domain %s  jump %s",
   cfg.id, cfg.airborne.addr, cfg.domain, cfg.jump))
 
+-- Domain names are core-specific, and a missing one reads as garbage rather
+-- than erroring, so record what this core actually exposes.
+do
+  local names = {}
+  local ok, list = pcall(memory.getmemorydomainlist)
+  if ok and list then
+    for i = 0, 63 do
+      local d = list[i]
+      if d == nil then break end
+      table.insert(names, tostring(d))
+    end
+  end
+  say("  domains: " .. (#names > 0 and table.concat(names, ", ") or "<none>"))
+end
+
 pcall(client.speedmode, SPEED)
 
 --------------------------------------------------------------------------------
@@ -192,7 +218,12 @@ local function boot_burst()
   return false
 end
 
-if cfg.gate then
+if START_STATE then
+  local ok = pcall(savestate.load, START_STATE)
+  say("  savestate: " .. (ok and "loaded" or "FAILED to load") .. " " .. START_STATE)
+  if not ok then finish() end
+  for _ = 1, 30 do set({}); emu.frameadvance() end
+elseif cfg.gate then
   local reached = false
   while el < 5400 and not reached do reached = boot_burst() end
   if not reached then say("  FAILED to reach gameplay"); finish() end
@@ -246,8 +277,14 @@ end
 -- and try again rather than reporting a failure we cannot stand behind.
 for attempt = 1, 4 do
   if attempt > 1 then
-    for _ = 1, 110 do boot_burst() end
-    for _ = 1, 60 do set({}); emu.frameadvance() end
+    if START_STATE then
+      -- Mashing on would wander away from the spot the state was saved at.
+      pcall(savestate.load, START_STATE)
+      for _ = 1, 30 do set({}); emu.frameadvance() end
+    else
+      for _ = 1, 110 do boot_burst() end
+      for _ = 1, 60 do set({}); emu.frameadvance() end
+    end
     local s = 0
     while airborne_now() and s < 400 do set({}); emu.frameadvance(); s = s + 1 end
   end

@@ -57,7 +57,7 @@ console prints the name it actually sees — paste that into the config block.
 | Mega Man 6 | NES | A | `$00AD` {00} | exact — verified 6/6 |
 | Mega Man 7 | SNES | B | `$0C02` {06,08,0A} | exact — verified 5/5 |
 | Mega Man X | SNES | B | `$0BAA` {06,08,0A} | exact — verified 6/6 |
-| Mega Man X2 | SNES | B | `$09DA` {06,08,0A} | **inferred, unverified** |
+| Mega Man X2 | SNES | B | `$09DA` {06,08,0A} | exact — verified 6/6 |
 | Mega Man X3 | SNES | B | `$09DA` {06,08,0A} | exact — verified 6/6 |
 | Mega Man & Bass | SNES | B | — | button (no ROM to test) |
 
@@ -88,8 +88,6 @@ when the script loads.
 
 **Mega Man & Bass still counts button presses**, because there is no ROM for it
 in `Games/`. Every other game counts exactly.
-
-**Mega Man X2's byte is inferred, not measured** — see above.
 
 **Mega Man 1's byte is the least trustworthy** of the verified set. It counts
 correctly in testing, but it is not a canonical state byte, so it is the most
@@ -174,22 +172,34 @@ Two findings mattered more than the addresses themselves:
 - On **MM3**, `0x01` also sets when walking off a ledge with no button press, so
   the state byte alone would count falls as jumps. Hence the button window.
 
-### Mega Man X2 is inferred, not measured
+### Mega Man X2 was inferred, then confirmed
 
-X2's intro stage puts X on the ride chaser, where the automated hunter dies
-before it can jump — all four attempts ended with the gate shut. So `$09DA` was
-derived rather than observed:
+X2's intro puts X on the ride chaser, where the automated hunter dies before it
+can measure a jump — all four attempts ended with the gate shut. So `$09DA` was
+first *derived* rather than observed:
 
 | Game | HP | State | Offset |
 |---|---|---|---|
 | Mega Man X | `$0BCF` | `$0BAA` | 0x25 |
 | Mega Man X3 | `$09FF` | `$09DA` | 0x25 |
-| Mega Man X2 | `$09FF` | `$09DA` (inferred) | 0x25 |
+| Mega Man X2 | `$09FF` | `$09DA` | 0x25 |
 
 X2 and X3 share their HP address *and* their menu/gameplay/pause addresses, and
-the state byte sits exactly `0x25` below HP on both games that were measured. It
-is a good inference, but it is an inference. **To confirm it, play X2 into a
-normal on-foot stage and check the jump counter tracks.**
+on both games that could be measured the state byte sits exactly `0x25` below
+HP. The prediction held: verified 6/6 from a savestate taken in a normal on-foot
+stage.
+
+This is what `JUMPRAMP_STATE` exists for. When a game's opening cannot be driven
+automatically, save a state standing on flat ground with headroom and point
+`verify.lua` (or `hunter.lua`) at it:
+
+```powershell
+$env:JUMPRAMP_STATE = "C:\path\to\BizHawk\SNES\State\Mega Man X2 (USA).Snes9x.QuickSave1.State"
+& "C:\path\to\BizHawk\EmuHawk.exe" --lua="...\verify.lua" "C:\path\to\Mega Man X2 (USA).zip"
+```
+
+Savestates are core-specific — the core in the filename must match the core the
+new instance loads, or the state will not restore.
 
 **MM1, MM4, MM5, MM6** have no apworld in this workspace, so they ship ungated
 with the correct platform domain and button.
@@ -211,12 +221,11 @@ Every ROM in `Games/Nes` and `Games/Snes` was booted under BizHawk 2.11.1 with
 
 - **Confirmed in real gameplay by a human** on Mega Man X (SNES, `WRAM`) and
   Mega Man 3 (NES, `RAM`) — both platforms, both memory domains.
-- **Exact counting proved automatically on 9 of the 10 available games** by
+- **Exact counting proved automatically on all 10 available games** by
   `verify.lua`: 6 scripted jumps plus provably-midair mashes give
   `exact = 6, button = 24`.
 
-**Not verified:** Mega Man X2 (inferred address — see above) and Mega Man & Bass
-(no ROM in `Games/`).
+**Not verified:** only Mega Man & Bass, which has no ROM in `Games/`.
 
 Mega Man 7 scored 5 rather than 6, and that is fine: its midair-mash count was
 15, which is exactly 3 per jump for 5 jumps. One scripted cycle produced no jump
@@ -237,14 +246,11 @@ than silently gating on the wrong memory. This is why NES uses `RAM` and not
 
 ## Possible next steps
 
-1. **Confirm Mega Man X2** by playing it into a normal on-foot stage (past the
-   ride chaser) and checking the counter tracks your jumps. If `$09DA` is wrong,
-   run `hunter.lua` from a savestate taken in that stage.
-2. **Mega Man & Bass** needs a ROM in `Games/` before anything can be tested.
-3. **Improve Mega Man 1's byte.** `$01F5` counts correctly but is not a real
+1. **Mega Man & Bass** needs a ROM in `Games/` before anything can be tested.
+2. **Improve Mega Man 1's byte.** `$01F5` counts correctly but is not a real
    state enum. A longer hunt, or MM1 RAM maps from the TAS/romhacking community,
    would likely turn up the canonical one.
-4. **Gates for the gateless games.** Less urgent than it was: with an airborne
+3. **Gates for the gateless games.** Less urgent than it was: with an airborne
    byte, menu presses cannot produce an airborne transition, so exact counting
    self-gates. A gate would still help the on-screen `ACTIVE`/`waiting` display
    be meaningful. MM3's `$00B2` is the model — one byte nonzero only in-stage.
