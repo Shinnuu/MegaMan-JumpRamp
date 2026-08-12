@@ -1,0 +1,8 @@
+# runtime state, one file per game, regenerated on every run
+jumpramp_state_*.txt
+
+# research output from probe.lua / hunter.lua / verify.lua
+probe_log.txt
+hunter_log.txt
+verify_log.txt
+hunter_shot_*.png
