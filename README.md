@@ -334,11 +334,10 @@ than silently gating on the wrong memory. This is why NES uses `RAM` and not
 
 ## Credits
 
-The live-gameplay gate addresses for Mega Man X1–X3 come from
-[lx5's Mega Man X Archipelago worlds](https://github.com/lx5x/), and the NES gate
-addresses from the `mm2` and `mm3` worlds in
-[ArchipelagoMW/Archipelago](https://github.com/ArchipelagoMW/Archipelago). Only
-RAM addresses were used — no code from either project is included here.
+The live-gameplay gate addresses for Mega Man X1–X3 come from **lx5's Mega Man X
+Archipelago worlds**, and the NES gate addresses from the `mm2` and `mm3` worlds
+in [ArchipelagoMW/Archipelago](https://github.com/ArchipelagoMW/Archipelago).
+Only RAM addresses were used — no code from either project is included here.
 
 Every airborne byte was found independently by `hunter.lua`.
 
