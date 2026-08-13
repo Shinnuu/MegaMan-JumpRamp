@@ -69,7 +69,12 @@ local OSD_SCALE = 1.0
 -- will not tell you so: a path, a typo or an empty string are all accepted and
 -- silently fall back to a default face. To use a custom font, install it in
 -- Windows first, then name the family ("Press Start 2P", not PressStart2P.ttf).
--- Keep it monospace or the digits shift about as the count changes.
+--
+-- Pick a font with equal-width digits, or the readout jumps about as the count
+-- ticks. Monospace always qualifies; so do Arial, Segoe UI, Verdana and Tahoma,
+-- which are proportional but have tabular figures. Georgia, Corbel, Candara,
+-- Constantia and Impact do NOT - Constantia renders "11111" 37px narrower than
+-- "88888" at size 24.
 local OSD_FONT  = "Courier New"
 local OSD_FG    = 0xFFFFFFFF      -- white text
 local OSD_BG    = 0xB0000000      -- semi-transparent black behind it, so the

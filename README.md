@@ -124,10 +124,24 @@ If you are streaming, the font has to be installed on **the machine running the
 emulator**. Otherwise that overlay quietly drops back to the default face while
 looking fine on yours.
 
-Stick to a monospace family. With a proportional font the digits have different
-widths, so the readout visibly shifts left and right as the count ticks — grating
-when it is on screen the whole run. `Consolas` is a cleaner alternative to
-`Courier New`; `Press Start 2P` gives a retro look but is harder to read small,
+**What actually matters is equal-width digits, not monospace.** Many proportional
+fonts use *tabular figures*, where every digit is the same width, and those are
+perfectly fine here. Fonts with *old-style figures* are not: the readout visibly
+jumps as the numbers tick, and the backing box breathes with it.
+
+Measured at size 24, width of `11111` versus `88888`:
+
+| Font | Digits |
+|---|---|
+| Courier New, Consolas, Lucida Console | stable (monospace) |
+| Arial, Segoe UI, Verdana, Tahoma | stable — proportional but tabular |
+| Georgia `81→109`, Corbel `85→96` | **shifts** |
+| Impact `73→99`, Candara `68→101`, Constantia `62→99` | **shifts badly** |
+
+`Consolas` is a cleaner monospace than `Courier New`. `Segoe UI` or `Arial` are
+good if you want something more compact — proportional, but stable. Avoid
+`Impact` despite how legible it looks at a distance; its digits are among the
+worst offenders. `Press Start 2P` gives a retro look but is hard to read small,
 which works against the point of scaling the text up in the first place.
 
 The auto size is about 1/36th of the window height — roughly 22pt in a windowed
