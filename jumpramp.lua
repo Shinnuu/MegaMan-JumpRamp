@@ -1,35 +1,45 @@
 --------------------------------------------------------------------------------
 -- Mega Man (NES + SNES) - Jump Speed Ramp
 --
--- Every jump makes the emulator 1 percentage point faster. Never resets on its
--- own; only the reset hotkey brings it back to 100%.
+-- Every jump makes the emulator faster. It never resets on its own; only the
+-- Home hotkey brings it back to normal.
 --
 -- Load in EmuHawk:  Tools -> Lua Console -> Script -> Open Script
 --
--- NES:   Mega Man 1-6            (jump = A, domain "RAM")
--- SNES:  Mega Man X, X2, X3      (jump = B, domain "WRAM")
---        Mega Man 7, Mega Man & Bass
+-- NES:   Mega Man 1-6                        (jump = A)
+-- SNES:  Mega Man 7, X, X2, X3, & Bass       (jump = B)
 --
--- Jump detection is button-based: it counts the rising edge of the jump button
--- while the gate says gameplay is live. See README for the accuracy caveat.
+-- Counting is exact on every game except Mega Man & Bass: a jump registers only
+-- when the player actually leaves the ground AND the jump button was pressed,
+-- so midair mashing, walking off ledges and slides do not inflate it.
+--
+--   ==========================================================================
+--    TO CHANGE HOW FAST IT RAMPS, edit the STEP line a few lines below, save
+--    the file, then reload the script in the Lua Console. Nothing else needs
+--    touching. See "Changing the speed increment" in the README.
+--   ==========================================================================
 --------------------------------------------------------------------------------
 
 --------------------------------- CONFIG ---------------------------------------
 
--- Percentage points added per jump. Any number works, fractions included:
+--  >>>>>>>>>>  HOW MUCH FASTER PER JUMP  <<<<<<<<<<
 --
---   1     one percent per jump (default)
---   0.5   one percent every two jumps - a gentler ramp
---   0.1   one percent every ten jumps
---   5     a brutal ramp
---   -0.5  ramps DOWN, if you want jumping to be rewarded instead
+--     0.5    +1% every 2 jumps     (default)
+--     1      +1% every jump        (steeper)
+--     0.1    +1% every 10 jumps    (very gradual)
+--     2.5    +2.5% every jump      (brutal)
+--    -0.5    ramps DOWN instead of up
 --
--- Fractions accumulate exactly; they do not drift. But note the emulator itself
--- only runs at WHOLE percentages, so with STEP = 0.5 the speed does not change
--- on odd-numbered jumps - it moves every second jump. There is no such thing as
--- 100.5% speed in BizHawk. The overlay shows the exact running total in
--- brackets when STEP is fractional, so you can see progress between steps.
-local STEP        = 1
+local STEP = 0.5
+--
+--  ^^^^^  change that number, save the file, reload the script  ^^^^^
+
+-- Fractions accumulate exactly and do not drift. Note though that BizHawk only
+-- runs at WHOLE percentages - there is no such thing as 100.5% speed - so a
+-- fractional STEP does not make the speed change by a fraction, it makes it
+-- change less often. With STEP = 0.5 the speed moves every second jump. When
+-- STEP is fractional the overlay shows the exact running total in brackets, so
+-- banked progress is visible between moves.
 
 local BASE_SPEED  = 100    -- speed with zero jumps, percent
 local MAX_SPEED   = 1000   -- your own ceiling; also clamped to BizHawk's 6400
@@ -483,6 +493,8 @@ end
 console.log(string.format("Resuming at %d jumps (%d%%)", jumps, target_speed()))
 console.log(string.format("Hotkeys: %s reset | %s pause counting | %s +1 | %s -1",
   KEY_RESET, KEY_TOGGLE, KEY_UP, KEY_DOWN))
+console.log("To change the ramp: edit STEP near the top of jumpramp.lua, save,")
+console.log("  then reload this script in the Lua Console.")
 
 -- Leave the emulator at normal speed when the script is stopped, otherwise
 -- EmuHawk stays stuck at whatever multiplier the run ended on.

@@ -1,10 +1,12 @@
 # Mega Man (NES + SNES) — Jump Speed Ramp
 
-A BizHawk Lua script for challenge runs: **every jump makes the emulator 1
-percentage point faster.** It never resets on its own — only the reset hotkey
-brings it back to 100%.
+A BizHawk Lua script for challenge runs: **every jump makes the emulator
+faster.** It never resets on its own — only the reset hotkey brings it back
+to 100%.
 
-100 jumps = 200% speed. 400 jumps = 500% speed.
+Out of the box it climbs **1% every two jumps**, so 100 jumps = 150% speed and
+400 jumps = 300%. That rate is a one-line change — see
+[Changing the speed increment](#changing-the-speed-increment).
 
 ## Why emulator-side and not a ROM hack
 
@@ -51,15 +53,40 @@ If a hotkey does nothing, BizHawk may use a different internal name for that key
 Set `DEBUG_KEYS = true` at the top of the script, press the key, and the Lua
 console prints the name it actually sees — paste that into the config block.
 
-## Tuning the ramp
+## Changing the speed increment
 
-Edit `STEP` at the top of `jumpramp.lua`. It takes **any number, fractions
-included**:
+`jumpramp.lua` is a plain text file — no build step, no tools, nothing to
+install. To change how fast the ramp climbs:
+
+1. **Open `jumpramp.lua` in any text editor.** Right-click it → *Open with* →
+   *Notepad* is enough. Notepad++, VS Code or similar are nicer but not needed.
+   Do **not** double-click it; Windows may try to run it instead of open it.
+2. **Find the `STEP` line near the top** — it is about 30 lines down, in a block
+   headed `HOW MUCH FASTER PER JUMP`, and looks like this:
+
+   ```lua
+   local STEP = 0.5
+   ```
+
+3. **Change the number** and save. That is the only line you need to touch.
+4. **Reload the script in BizHawk.** In the Lua Console, untick the script's
+   checkbox and tick it again — that restarts it with your new value. (Reopening
+   it via *Script → Open Script* also works.)
+
+Your jump count survives the reload, because it is stored per game in
+`jumpramp_state_<game>.txt` next to the script. Press `Home` if you want to
+start from zero at the new setting.
+
+The console prints the step it loaded with, so you can confirm the change took.
+
+### What values work
+
+`STEP` takes **any number, fractions included**:
 
 | `STEP` | Effect |
 |---|---|
-| `1` | +1% per jump (default) |
-| `0.5` | +1% every 2 jumps — gentler |
+| `0.5` | +1% every 2 jumps — **the default** |
+| `1` | +1% per jump — steeper |
 | `0.1` | +1% every 10 jumps — very gradual |
 | `2.5` | +2.5% per jump — brutal |
 | `-0.5` | ramps **down**, if you'd rather reward jumping |
