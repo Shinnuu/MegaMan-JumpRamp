@@ -39,6 +39,8 @@ self-contained and the Python files are optional developer tests.
 That is the whole setup. The console prints the detected game, jump button and
 memory domain at load. The on-screen overlay shows the jump count, current speed,
 and whether the counter is `ACTIVE`, `waiting` (not in gameplay), or `PAUSED`.
+It scales with the window, so it stays readable fullscreen and on a stream — see
+[On-screen display](#on-screen-display-and-streaming).
 
 ## Hotkeys
 
@@ -78,6 +80,39 @@ Your jump count survives the reload, because it is stored per game in
 start from zero at the new setting.
 
 The console prints the step it loaded with, so you can confirm the change took.
+
+### On-screen display (and streaming)
+
+The readout sits in the top-left of the emulator display, three lines:
+
+```
+JUMPS 12
+SPEED 106%  (106.00)
+ACTIVE
+```
+
+The bracketed figure only appears when `STEP` is fractional — it is the exact
+running total, so you can see a jump has been banked while the whole-percent
+speed has not moved yet. The third line is `ACTIVE` in a stage, `waiting`
+otherwise, and `PAUSED` after pressing `End`.
+
+**The text scales with the window**, and is re-measured every frame, so it
+resizes the moment you go fullscreen rather than needing a reload. This matters:
+BizHawk's plain `gui.text()` uses a *fixed* pixel font, so on a fullscreen or 4K
+display it shrinks to an unreadable speck. If you are streaming and want the
+audience to follow the count, that is the difference between legible and useless.
+
+Three settings near the top of the script control it:
+
+| Setting | Default | Effect |
+|---|---|---|
+| `OSD_SCALE` | `1.0` | Multiplier on the auto size. **Raise this for streaming** — `1.2`–`1.5` suits viewers watching on a phone. |
+| `OSD_SIZE` | `"auto"` | Set a number instead to pin an exact point size and ignore scaling. |
+| `OSD_FONT` | `"Courier New"` | Monospace, so the digits do not jitter as the count changes. |
+
+The auto size is about 1/36th of the window height — roughly 22pt in a windowed
+setup, 36pt fullscreen at 1080p-ish, 60pt at 4K. Text is drawn with a
+semi-transparent black backing so it stays readable over bright stages.
 
 ### What values work
 

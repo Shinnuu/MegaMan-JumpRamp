@@ -52,6 +52,24 @@ local MIN_SPEED   = 25     -- your own floor; also clamped to BizHawk's 1
 local EMU_MIN_SPEED = 1
 local EMU_MAX_SPEED = 6400
 
+-- On-screen display.
+--
+-- BizHawk's plain gui.text() uses a FIXED pixel font, so as the window grows
+-- the readout shrinks into illegibility - fullscreen on a big monitor it is
+-- unreadable, which matters if you are streaming and the audience needs to see
+-- the count. This scales the text with the window instead, and re-measures
+-- every frame, so it adapts the moment you go fullscreen or resize.
+--
+--   OSD_SIZE    "auto" to scale with the window, or a fixed point size like 28
+--   OSD_SCALE   multiplier on the auto size. Raise it for streaming so the
+--               readout stays legible for viewers watching on a phone.
+local OSD_SIZE  = "auto"
+local OSD_SCALE = 1.0
+local OSD_FONT  = "Courier New"   -- monospace, so the digits do not jitter
+local OSD_FG    = 0xFFFFFFFF      -- white text
+local OSD_BG    = 0xB0000000      -- semi-transparent black behind it, so the
+                                  -- text stays readable over bright stages
+
 -- Hotkeys. If one does nothing, set DEBUG_KEYS = true to learn the real name
 -- BizHawk uses for the key you pressed, then paste it in here.
 local KEY_RESET   = "Home"      -- back to 100%, jump counter to zero
@@ -427,6 +445,55 @@ local function target_speed()
   return s
 end
 
+--------------------------------------------------------------------------------
+-- On-screen display
+--------------------------------------------------------------------------------
+
+-- Recomputed every frame rather than cached, so switching to fullscreen mid-run
+-- resizes the readout immediately instead of leaving it tiny.
+local function osd_font_size()
+  if type(OSD_SIZE) == "number" then
+    return math.max(8, math.floor(OSD_SIZE * OSD_SCALE))
+  end
+  local h = 448
+  local ok, v = pcall(client.screenheight)
+  if ok and type(v) == "number" and v > 0 then h = v end
+
+  -- Roughly 1/36th of the window height. Tuned by eye: large enough to read on
+  -- a stream, small enough not to cover the play area. Nudge OSD_SCALE rather
+  -- than editing this.
+  local s = math.floor((h / 36) * OSD_SCALE)
+  if s < 11 then s = 11 end
+  if s > 96 then s = 96 end
+  return s
+end
+
+local osd_warned = false
+
+local function draw_osd(lines)
+  local size = osd_font_size()
+  local pad  = math.max(2, math.floor(size * 0.3))
+  local step = math.floor(size * 1.35)
+
+  -- Draw in window space, which is what a window/display capture records.
+  pcall(gui.use_surface, "client")
+
+  for i, line in ipairs(lines) do
+    local y = pad + (i - 1) * step
+    local ok = pcall(gui.drawText, pad, y, line, OSD_FG, OSD_BG, size, OSD_FONT)
+    if not ok then
+      -- Much older BizHawk without gui.drawText: fall back to the fixed-size
+      -- call so the readout still appears, just without scaling.
+      pcall(gui.text, 4, 4 + (i - 1) * 16, line)
+      if not osd_warned then
+        console.log("jumpramp: gui.drawText unavailable - the readout will not")
+        console.log("  scale with the window on this BizHawk version.")
+        osd_warned = true
+      end
+    end
+  end
+end
+
 local function apply_speed()
   local s = target_speed()
   if s ~= applied then
@@ -577,15 +644,20 @@ while true do
     if DEBUG_GATE and block_desc ~= "" then status = status .. " (" .. block_desc .. ")" end
   end
 
-  gui.text(4,  4, string.format("JUMPS %d", jumps))
+  local speed_line
   if FRACTIONAL_STEP then
     -- Show the running total too, otherwise a fractional step looks broken:
     -- the jump count rises while the whole-percent speed sits still.
-    gui.text(4, 20, string.format("SPEED %d%%  (%.2f)", target_speed(), exact_speed()))
+    speed_line = string.format("SPEED %d%%  (%.2f)", target_speed(), exact_speed())
   else
-    gui.text(4, 20, string.format("SPEED %d%%", target_speed()))
+    speed_line = string.format("SPEED %d%%", target_speed())
   end
-  gui.text(4, 36, status)
+
+  draw_osd({
+    string.format("JUMPS %d", jumps),
+    speed_line,
+    status,
+  })
 
   emu.frameadvance()
 end
