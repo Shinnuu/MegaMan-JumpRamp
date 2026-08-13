@@ -51,6 +51,38 @@ If a hotkey does nothing, BizHawk may use a different internal name for that key
 Set `DEBUG_KEYS = true` at the top of the script, press the key, and the Lua
 console prints the name it actually sees — paste that into the config block.
 
+## Tuning the ramp
+
+Edit `STEP` at the top of `jumpramp.lua`. It takes **any number, fractions
+included**:
+
+| `STEP` | Effect |
+|---|---|
+| `1` | +1% per jump (default) |
+| `0.5` | +1% every 2 jumps — gentler |
+| `0.1` | +1% every 10 jumps — very gradual |
+| `2.5` | +2.5% per jump — brutal |
+| `-0.5` | ramps **down**, if you'd rather reward jumping |
+
+**One caveat worth understanding.** BizHawk itself only runs at *whole*
+percentages — there is no such thing as 100.5% speed. `client.speedmode()`
+truncates fractions and, worse, **silently ignores** anything outside `1`–`6400`
+rather than erroring or clamping.
+
+So a fractional `STEP` does not make the speed change on every jump; it makes it
+change less often. With `STEP = 0.5` the speed moves every second jump. The
+running total is tracked exactly and never drifts — `0.1 × 400` is exactly
+`+40%` — it is only the *applied* speed that lands on whole numbers.
+
+To make that legible, when `STEP` is fractional the overlay shows the exact
+total in brackets, so `SPEED 102%  (102.50)` tells you a jump has been banked
+even though the emulator has not moved yet. The console explains the cadence at
+load.
+
+`BASE_SPEED`, `MIN_SPEED` and `MAX_SPEED` are also adjustable. They are clamped
+to BizHawk's real `1`–`6400` range, so setting `MAX_SPEED = 99999` will not
+silently produce a ramp that appears stuck.
+
 ## Game support
 
 | Game | Platform | Jump | Airborne byte | Counting |

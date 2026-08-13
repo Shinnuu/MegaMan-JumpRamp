@@ -16,10 +16,31 @@
 
 --------------------------------- CONFIG ---------------------------------------
 
-local STEP        = 1      -- percentage points added per jump (additive)
+-- Percentage points added per jump. Any number works, fractions included:
+--
+--   1     one percent per jump (default)
+--   0.5   one percent every two jumps - a gentler ramp
+--   0.1   one percent every ten jumps
+--   5     a brutal ramp
+--   -0.5  ramps DOWN, if you want jumping to be rewarded instead
+--
+-- Fractions accumulate exactly; they do not drift. But note the emulator itself
+-- only runs at WHOLE percentages, so with STEP = 0.5 the speed does not change
+-- on odd-numbered jumps - it moves every second jump. There is no such thing as
+-- 100.5% speed in BizHawk. The overlay shows the exact running total in
+-- brackets when STEP is fractional, so you can see progress between steps.
+local STEP        = 1
+
 local BASE_SPEED  = 100    -- speed with zero jumps, percent
-local MAX_SPEED   = 1000   -- clamp. BizHawk itself tolerates up to 6400
-local MIN_SPEED   = 25     -- floor for the manual-adjust hotkeys
+local MAX_SPEED   = 1000   -- your own ceiling; also clamped to BizHawk's 6400
+local MIN_SPEED   = 25     -- your own floor; also clamped to BizHawk's 1
+
+-- BizHawk's real limits, measured rather than assumed. client.speedmode()
+-- truncates fractions to whole percent, and SILENTLY IGNORES anything outside
+-- 1..6400 - it never raises an error, the speed simply does not change. Without
+-- clamping to these, an over-ambitious MAX_SPEED looks like a stuck ramp.
+local EMU_MIN_SPEED = 1
+local EMU_MAX_SPEED = 6400
 
 -- Hotkeys. If one does nothing, set DEBUG_KEYS = true to learn the real name
 -- BizHawk uses for the key you pressed, then paste it in here.
@@ -194,6 +215,8 @@ local jumps      = 0
 local counting   = true
 local profile    = nil
 local applied    = -1      -- last speed handed to the emulator
+local FRACTIONAL_STEP = (STEP % 1) ~= 0
+
 local prev_jump  = false
 local prev_air   = false
 local press_age  = 999     -- frames since the jump button last went down
@@ -372,11 +395,26 @@ end
 -- Speed
 --------------------------------------------------------------------------------
 
-local function target_speed()
+-- The true accumulated speed, which may be fractional.
+local function exact_speed()
   local s = BASE_SPEED + (jumps * STEP)
   if s > MAX_SPEED then s = MAX_SPEED end
   if s < MIN_SPEED then s = MIN_SPEED end
-  return math.floor(s)
+  return s
+end
+
+-- What the emulator can actually be set to: whole percent, inside its own
+-- accepted range. Floor rather than round, so a fraction of a percent that has
+-- not been fully earned yet does not get handed out early.
+local function target_speed()
+  -- The epsilon matters. Binary floating point can leave a fractional step just
+  -- under a whole number - 0.3 * 10 is 2.9999999999999996, not 3 - and a bare
+  -- floor would then hand out the percent one jump late. Far too small to
+  -- affect a step the player has not genuinely earned.
+  local s = math.floor(exact_speed() + 1e-9)
+  if s < EMU_MIN_SPEED then s = EMU_MIN_SPEED end
+  if s > EMU_MAX_SPEED then s = EMU_MAX_SPEED end
+  return s
 end
 
 local function apply_speed()
@@ -425,6 +463,23 @@ else
   console.log("Game: UNRECOGNISED - running ungated, assuming SNES buttons.")
   console.log("Add the ROM title to a profile's `patterns` list to fix this.")
 end
+console.log(string.format("Step: %s%% per jump   base %d%%   range %d-%d%%",
+  tostring(STEP), BASE_SPEED, MIN_SPEED, MAX_SPEED))
+
+if STEP == 0 then
+  console.log("jumpramp: STEP is 0 - the speed will never change.")
+elseif FRACTIONAL_STEP then
+  local per = 1 / math.abs(STEP)
+  console.log("jumpramp: fractional step - BizHawk only runs at whole percent,")
+  console.log(string.format(
+    "  so the speed moves once every %.1f jumps, not on every jump.", per))
+end
+if MAX_SPEED > EMU_MAX_SPEED then
+  console.log(string.format(
+    "jumpramp: MAX_SPEED %d is above BizHawk's %d ceiling - clamping to %d.",
+    MAX_SPEED, EMU_MAX_SPEED, EMU_MAX_SPEED))
+end
+
 console.log(string.format("Resuming at %d jumps (%d%%)", jumps, target_speed()))
 console.log(string.format("Hotkeys: %s reset | %s pause counting | %s +1 | %s -1",
   KEY_RESET, KEY_TOGGLE, KEY_UP, KEY_DOWN))
@@ -511,7 +566,13 @@ while true do
   end
 
   gui.text(4,  4, string.format("JUMPS %d", jumps))
-  gui.text(4, 20, string.format("SPEED %d%%", target_speed()))
+  if FRACTIONAL_STEP then
+    -- Show the running total too, otherwise a fractional step looks broken:
+    -- the jump count rises while the whole-percent speed sits still.
+    gui.text(4, 20, string.format("SPEED %d%%  (%.2f)", target_speed(), exact_speed()))
+  else
+    gui.text(4, 20, string.format("SPEED %d%%", target_speed()))
+  end
   gui.text(4, 36, status)
 
   emu.frameadvance()
