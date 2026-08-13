@@ -102,13 +102,29 @@ BizHawk's plain `gui.text()` uses a *fixed* pixel font, so on a fullscreen or 4K
 display it shrinks to an unreadable speck. If you are streaming and want the
 audience to follow the count, that is the difference between legible and useless.
 
-Three settings near the top of the script control it:
+Everything about it is tunable near the top of the script:
 
 | Setting | Default | Effect |
 |---|---|---|
+| `OSD_ENABLED` | `true` | `false` hides the readout entirely. The ramp still runs — useful if you composite your own overlay in OBS. |
 | `OSD_SCALE` | `1.0` | Multiplier on the auto size. **Raise this for streaming** — `1.2`–`1.5` suits viewers watching on a phone. |
 | `OSD_SIZE` | `"auto"` | Set a number instead to pin an exact point size and ignore scaling. |
-| `OSD_FONT` | `"Courier New"` | Monospace, so the digits do not jitter as the count changes. |
+| `OSD_LINE_GAP` | `1.15` | Line spacing, as a multiple of the font size. Lower packs the lines tighter. |
+| `OSD_X` / `OSD_Y` | `"auto"` | Position in window pixels. A **negative** value counts back from the right or bottom edge, so `OSD_X = -320` pins it to the right without knowing the resolution. |
+| `OSD_FG` / `OSD_BG` | white / 69% black | Colours as `0xAARRGGBB`. `OSD_BG = 0x00000000` removes the shading. |
+| `OSD_FONT` | `"Courier New"` | Font family — see below. |
+
+**A note on packing the lines tighter.** A rendered line is roughly **1.7×** the
+font size tall, so at the default gap of `1.15` the shaded boxes behind each line
+already overlap. That is fine, but because the shading is semi-transparent the
+overlap darkens slightly and can show as faint banding between rows. If you drop
+`OSD_LINE_GAP` much below `1.0` and that bothers you, make the shading opaque:
+
+```lua
+local OSD_BG = 0xFF000000
+```
+
+Opaque boxes overlap invisibly, so you can pack them as tight as you like.
 
 **`OSD_FONT` takes a font *family name*, not a file.** You cannot point it at a
 `.ttf`, and — the trap — it will not tell you so. BizHawk never validates the

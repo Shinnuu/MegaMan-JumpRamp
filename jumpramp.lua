@@ -60,11 +60,29 @@ local EMU_MAX_SPEED = 6400
 -- the count. This scales the text with the window instead, and re-measures
 -- every frame, so it adapts the moment you go fullscreen or resize.
 --
---   OSD_SIZE    "auto" to scale with the window, or a fixed point size like 28
---   OSD_SCALE   multiplier on the auto size. Raise it for streaming so the
---               readout stays legible for viewers watching on a phone.
-local OSD_SIZE  = "auto"
-local OSD_SCALE = 1.0
+-- Everything about the readout is tunable here.
+--
+--   OSD_ENABLED   false hides it completely, if you would rather composite your
+--                 own overlay in OBS. The ramp still works.
+--   OSD_SIZE      "auto" to scale with the window, or a fixed point size like 28
+--   OSD_SCALE     multiplier on the auto size. Raise it for streaming so the
+--                 readout stays legible for viewers watching on a phone.
+--   OSD_LINE_GAP  line spacing, as a multiple of the font size. Lower packs the
+--                 lines tighter. Below about 1.0 the lines start to touch; the
+--                 rendered height of a line is roughly 1.7x the font size, so
+--                 the shaded boxes behind them overlap well before that. If you
+--                 see banding where they overlap, set OSD_BG fully opaque
+--                 (0xFF......) or raise the gap.
+--   OSD_X/OSD_Y   position in window pixels. "auto" is a margin that scales
+--                 with the font. A NEGATIVE number counts back from the right
+--                 or bottom edge, so OSD_X = -300 pins it to the right side.
+--   OSD_FG/OSD_BG colours as 0xAARRGGBB. Set OSD_BG = 0x00000000 for no shading.
+local OSD_ENABLED  = true
+local OSD_SIZE     = "auto"
+local OSD_SCALE    = 1.0
+local OSD_LINE_GAP = 1.15
+local OSD_X        = "auto"
+local OSD_Y        = "auto"
 -- A font FAMILY NAME, not a file. You cannot point this at a .ttf, and BizHawk
 -- will not tell you so: a path, a typo or an empty string are all accepted and
 -- silently fall back to a default face. To use a custom font, install it in
@@ -480,21 +498,52 @@ end
 
 local osd_warned = false
 
+-- Window size, with a sane fallback if the call is unavailable.
+local function screen_dims()
+  local w, h = 640, 480
+  local ok, v = pcall(client.screenwidth)
+  if ok and type(v) == "number" and v > 0 then w = v end
+  ok, v = pcall(client.screenheight)
+  if ok and type(v) == "number" and v > 0 then h = v end
+  return w, h
+end
+
+-- A negative OSD_X/OSD_Y counts back from the far edge, so the readout can be
+-- pinned to the right or bottom without knowing the resolution in advance.
+local function osd_origin(size)
+  local margin = math.max(2, math.floor(size * 0.3))
+  local sw, sh = screen_dims()
+
+  local x = margin
+  if type(OSD_X) == "number" then
+    x = (OSD_X >= 0) and OSD_X or (sw + OSD_X)
+  end
+
+  local y = margin
+  if type(OSD_Y) == "number" then
+    y = (OSD_Y >= 0) and OSD_Y or (sh + OSD_Y)
+  end
+
+  return math.floor(x), math.floor(y)
+end
+
 local function draw_osd(lines)
+  if not OSD_ENABLED then return end
+
   local size = osd_font_size()
-  local pad  = math.max(2, math.floor(size * 0.3))
-  local step = math.floor(size * 1.35)
+  local step = math.max(1, math.floor(size * OSD_LINE_GAP))
+  local x, y0 = osd_origin(size)
 
   -- Draw in window space, which is what a window/display capture records.
   pcall(gui.use_surface, "client")
 
   for i, line in ipairs(lines) do
-    local y = pad + (i - 1) * step
-    local ok = pcall(gui.drawText, pad, y, line, OSD_FG, OSD_BG, size, OSD_FONT)
+    local y = y0 + (i - 1) * step
+    local ok = pcall(gui.drawText, x, y, line, OSD_FG, OSD_BG, size, OSD_FONT)
     if not ok then
       -- Much older BizHawk without gui.drawText: fall back to the fixed-size
       -- call so the readout still appears, just without scaling.
-      pcall(gui.text, 4, 4 + (i - 1) * 16, line)
+      pcall(gui.text, x, y0 + (i - 1) * 16, line)
       if not osd_warned then
         console.log("jumpramp: gui.drawText unavailable - the readout will not")
         console.log("  scale with the window on this BizHawk version.")
@@ -658,7 +707,7 @@ while true do
   if FRACTIONAL_STEP then
     -- Show the running total too, otherwise a fractional step looks broken:
     -- the jump count rises while the whole-percent speed sits still.
-    speed_line = string.format("SPEED %d%%  (%.2f)", target_speed(), exact_speed())
+    speed_line = string.format("SPEED %d%% (%.2f)", target_speed(), exact_speed())
   else
     speed_line = string.format("SPEED %d%%", target_speed())
   end
