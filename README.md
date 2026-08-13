@@ -110,6 +110,26 @@ Three settings near the top of the script control it:
 | `OSD_SIZE` | `"auto"` | Set a number instead to pin an exact point size and ignore scaling. |
 | `OSD_FONT` | `"Courier New"` | Monospace, so the digits do not jitter as the count changes. |
 
+**`OSD_FONT` takes a font *family name*, not a file.** You cannot point it at a
+`.ttf`, and — the trap — it will not tell you so. BizHawk never validates the
+name: a file path, a bare filename, a typo and an empty string are all accepted
+and silently fall back to a default face. It looks like it worked, and you get
+the wrong font.
+
+To use a custom font, install it in Windows first (right-click the `.ttf` →
+*Install*), then reference it by the family name shown when you open the file —
+`arial.ttf` is `"Arial"`, `PressStart2P.ttf` is `"Press Start 2P"`.
+
+If you are streaming, the font has to be installed on **the machine running the
+emulator**. Otherwise that overlay quietly drops back to the default face while
+looking fine on yours.
+
+Stick to a monospace family. With a proportional font the digits have different
+widths, so the readout visibly shifts left and right as the count ticks — grating
+when it is on screen the whole run. `Consolas` is a cleaner alternative to
+`Courier New`; `Press Start 2P` gives a retro look but is harder to read small,
+which works against the point of scaling the text up in the first place.
+
 The auto size is about 1/36th of the window height — roughly 22pt in a windowed
 setup, 36pt fullscreen at 1080p-ish, 60pt at 4K. Text is drawn with a
 semi-transparent black backing so it stays readable over bright stages.

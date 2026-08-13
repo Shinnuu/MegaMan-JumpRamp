@@ -65,7 +65,12 @@ local EMU_MAX_SPEED = 6400
 --               readout stays legible for viewers watching on a phone.
 local OSD_SIZE  = "auto"
 local OSD_SCALE = 1.0
-local OSD_FONT  = "Courier New"   -- monospace, so the digits do not jitter
+-- A font FAMILY NAME, not a file. You cannot point this at a .ttf, and BizHawk
+-- will not tell you so: a path, a typo or an empty string are all accepted and
+-- silently fall back to a default face. To use a custom font, install it in
+-- Windows first, then name the family ("Press Start 2P", not PressStart2P.ttf).
+-- Keep it monospace or the digits shift about as the count changes.
+local OSD_FONT  = "Courier New"
 local OSD_FG    = 0xFFFFFFFF      -- white text
 local OSD_BG    = 0xB0000000      -- semi-transparent black behind it, so the
                                   -- text stays readable over bright stages
